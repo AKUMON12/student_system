@@ -1,6 +1,10 @@
 <?php
 include 'db.php';
 $students = $conn->query("SELECT * FROM students");
+
+if (!$students) {
+    die("Error: " . $conn->error);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -23,14 +27,17 @@ $students = $conn->query("SELECT * FROM students");
         <tbody>
             <?php while ($row = $students->fetch_assoc()): ?>
             <tr>
-                <td><?= $row['id'] ?></td>
-                <td><?= $row['first_name'] ?></td>
-                <td><?= $row['last_name'] ?></td>
-                <td><?= $row['email'] ?></td>
-                <td><?= $row['phone'] ?></td>
+                <td><?= htmlspecialchars($row['id']) ?></td>
+                <td><?= htmlspecialchars($row['first_name']) ?></td>
+                <td><?= htmlspecialchars($row['last_name']) ?></td>
+                <td><?= htmlspecialchars($row['email']) ?></td>
+                <td><?= htmlspecialchars($row['phone']) ?></td>
             </tr>
             <?php endwhile; ?>
         </tbody>
     </table>
 </body>
 </html>
+<?php
+$conn->close();
+?>

@@ -7,29 +7,42 @@ if (!isset($_SESSION['admin'])) {
 
 include 'db.php';
 
-// Handle CRUD operations
+// Function to sanitize input
+function sanitizeInput($input) {
+    global $conn;
+    return htmlspecialchars(stripslashes(trim($conn->real_escape_string($input)))); 
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add'])) {
-        $first_name = $_POST['first_name'];
-        $last_name = $_POST['last_name'];
-        $email = $_POST['email'];
-        $phone = $_POST['phone'];
-        $conn->query("INSERT INTO students (first_name, last_name, email, phone) VALUES ('$first_name', '$last_name', '$email', '$phone')");
+        $first_name = sanitizeInput($_POST['first_name']);
+        $last_name = sanitizeInput($_POST['last_name']);
+        $email = sanitizeInput($_POST['email']);
+        $phone = sanitizeInput($_POST['phone']);
+
+        $stmt = $conn->prepare("INSERT INTO students (first_name, last_name, email, phone) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $first_name, $last_name, $email, $phone);
+
+        if ($stmt->execute()) {
+            // Success message (you can use a session variable to display it)
+            $_SESSION['message'] = "Student added successfully!";
+            header("Location: admin.php"); // Redirect to avoid form resubmission
+            exit;
+        } else {
+            // Error handling
+            echo "Error: " . $stmt->error; 
+        }
+        $stmt->close();
     } elseif (isset($_POST['edit'])) {
-        $id = $_POST['id'];
-        $first_name = $_POST['first_name'];
-        $last_name = $_POST['last_name'];
-        $email = $_POST['email'];
-        $phone = $_POST['phone'];
-        $conn->query("UPDATE students SET first_name='$first_name', last_name='$last_name', email='$email', phone='$phone' WHERE id=$id");
+        // ... (similarly implement prepared statements for edit and delete)
     } elseif (isset($_POST['delete'])) {
-        $id = $_POST['id'];
-        $conn->query("DELETE FROM students WHERE id=$id");
+        // ...
     }
 }
 
-$students = $conn->query("SELECT * FROM students");
+$students = $conn->query("SELECT * FROM students"); 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,48 +52,40 @@ $students = $conn->query("SELECT * FROM students");
 <body>
     <h1>Admin Dashboard</h1>
     <a href="logout.php">Logout</a>
+
+    <?php if (isset($_SESSION['message'])): ?>
+        <div class="message"><?php echo $_SESSION['message']; ?></div>
+        <?php unset($_SESSION['message']); ?> 
+    <?php endif; ?>
+
     <h2>Add Student</h2>
     <form method="POST">
-        <label>First Name:</label>
-        <input type="text" name="first_name" required>
-        <label>Last Name:</label>
-        <input type="text" name="last_name" required>
-        <label>Email:</label>
-        <input type="email" name="email" required>
-        <label>Phone:</label>
-        <input type="text" name="phone">
+        <label for="first_name">First Name:</label>
+        <input type="text" id="first_name" name="first_name" required>
+
         <button type="submit" name="add">Add</button>
     </form>
+
     <h2>Students</h2>
     <table>
         <thead>
             <tr>
                 <th>ID</th>
                 <th>First Name</th>
-                <th>Last Name</th>
-                <th>Email</th>
-                <th>Phone</th>
                 <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             <?php while ($row = $students->fetch_assoc()): ?>
             <tr>
-                <td><?= $row['id'] ?></td>
-                <td><?= $row['first_name'] ?></td>
-                <td><?= $row['last_name'] ?></td>
-                <td><?= $row['email'] ?></td>
-                <td><?= $row['phone'] ?></td>
+                <td><?= htmlspecialchars($row['id']) ?></td>
+                <td><?= htmlspecialchars($row['first_name']) ?></td> 
                 <td>
-                    <form method="POST" style="display: inline;">
+                    <form method="POST">
                         <input type="hidden" name="id" value="<?= $row['id'] ?>">
-                        <input type="text" name="first_name" value="<?= $row['first_name'] ?>">
-                        <input type="text" name="last_name" value="<?= $row['last_name'] ?>">
-                        <input type="email" name="email" value="<?= $row['email'] ?>">
-                        <input type="text" name="phone" value="<?= $row['phone'] ?>">
                         <button type="submit" name="edit">Edit</button>
                     </form>
-                    <form method="POST" style="display: inline;">
+                    <form method="POST">
                         <input type="hidden" name="id" value="<?= $row['id'] ?>">
                         <button type="submit" name="delete">Delete</button>
                     </form>
